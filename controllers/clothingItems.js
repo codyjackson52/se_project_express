@@ -6,37 +6,34 @@ const {
 } = require("../utils/errors");
 
 // GET all items
-module.exports.getClothingItems = (req, res) => {
-  ClothingItem.find({})
+module.exports.getClothingItems = (req, res) => ClothingItem.find({}) // ✅ ADDED return
     .then((items) => res.send(items))
     .catch((err) => {
       console.error(err);
-      res
+      return res // ✅ ADDED return for consistency
         .status(INTERNAL_SERVER_ERROR)
         .send({ message: "An error occurred on the server" });
     });
-};
 
 // POST create new item
 module.exports.createClothingItem = (req, res) => {
   const { name, weather, imageUrl } = req.body;
 
-  ClothingItem.create({ name, weather, imageUrl, owner: req.user._id })
+  return ClothingItem.create({ name, weather, imageUrl, owner: req.user._id }) // ✅ return
     .then((item) => res.status(201).send(item))
     .catch((err) => {
       console.error(err);
       if (err.name === "ValidationError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid item data" });
+        return res.status(BAD_REQUEST).send({ message: "Invalid item data" }); // ✅ return
       }
-      res
+      return res // ✅ return added
         .status(INTERNAL_SERVER_ERROR)
         .send({ message: "An error occurred on the server" });
     });
 };
 
 // DELETE an item by ID
-module.exports.deleteClothingItem = (req, res) => {
-  ClothingItem.findByIdAndDelete(req.params.itemId)
+module.exports.deleteClothingItem = (req, res) => ClothingItem.findByIdAndDelete(req.params.itemId) // ✅ return
     .orFail(() => {
       const error = new Error("Item not found");
       error.statusCode = NOT_FOUND;
@@ -46,20 +43,19 @@ module.exports.deleteClothingItem = (req, res) => {
     .catch((err) => {
       console.error(err);
       if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid item ID" });
+        return res.status(BAD_REQUEST).send({ message: "Invalid item ID" }); // ✅ return
       }
       if (err.statusCode === NOT_FOUND) {
-        return res.status(NOT_FOUND).send({ message: err.message });
+        return res.status(NOT_FOUND).send({ message: err.message }); // ✅ return
       }
-      res
+      return res // ✅ return added
         .status(INTERNAL_SERVER_ERROR)
         .send({ message: "An error occurred on the server" });
     });
-};
 
 // PUT like item
-module.exports.likeItem = (req, res) => {
-  ClothingItem.findByIdAndUpdate(
+module.exports.likeItem = (req, res) => ClothingItem.findByIdAndUpdate(
+    // ✅ return
     req.params.itemId,
     { $addToSet: { likes: req.user._id } },
     { new: true }
@@ -73,20 +69,19 @@ module.exports.likeItem = (req, res) => {
     .catch((err) => {
       console.error(err);
       if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid item ID" });
+        return res.status(BAD_REQUEST).send({ message: "Invalid item ID" }); // ✅ return
       }
       if (err.statusCode === NOT_FOUND) {
-        return res.status(NOT_FOUND).send({ message: err.message });
+        return res.status(NOT_FOUND).send({ message: err.message }); // ✅ return
       }
-      res
+      return res // ✅ return added
         .status(INTERNAL_SERVER_ERROR)
         .send({ message: "An error occurred on the server" });
     });
-};
 
 // DELETE dislike item
-module.exports.dislikeItem = (req, res) => {
-  ClothingItem.findByIdAndUpdate(
+module.exports.dislikeItem = (req, res) => ClothingItem.findByIdAndUpdate(
+    // ✅ return
     req.params.itemId,
     { $pull: { likes: req.user._id } },
     { new: true }
@@ -100,13 +95,12 @@ module.exports.dislikeItem = (req, res) => {
     .catch((err) => {
       console.error(err);
       if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid item ID" });
+        return res.status(BAD_REQUEST).send({ message: "Invalid item ID" }); // ✅ return
       }
       if (err.statusCode === NOT_FOUND) {
-        return res.status(NOT_FOUND).send({ message: err.message });
+        return res.status(NOT_FOUND).send({ message: err.message }); // ✅ return
       }
-      res
+      return res // ✅ return added
         .status(INTERNAL_SERVER_ERROR)
         .send({ message: "An error occurred on the server" });
     });
-};
