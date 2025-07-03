@@ -1,32 +1,25 @@
 const router = require("express").Router();
+const auth = require("../middlewares/auth");
 const userRoutes = require("./users");
 const itemRoutes = require("./clothingItems");
-const { NOT_FOUND } = require("../utils/errors"); // ✅ Import 404 constant
+const login = require("../controllers/login");
+const { createUser } = require("../controllers/users");
+const { NOT_FOUND } = require("../utils/errors");
 
-console.log("✅ routes/index.js is loaded"); // DEBUG LOG
+// Public routes
+router.post("/signin", login);
+router.post("/signup", createUser);
 
-router.use(
-  "/users",
-  (req, res, next) => {
-    console.log("🛬 /users route hit"); // DEBUG LOG
-    next();
-  },
-  userRoutes
-);
+// Auth middleware — protects everything below
+router.use(auth);
 
-router.use(
-  "/items",
-  (req, res, next) => {
-    console.log("🛬 /items route hit"); // DEBUG LOG
-    next();
-  },
-  itemRoutes
-);
+// Protected routes
+router.use("/users", userRoutes);
+router.use("/items", itemRoutes);
 
-// Handle all unmatched routes
+// 404 Catch-all
 router.use("*", (req, res) => {
-  console.log("❌ Route not found: ", req.originalUrl); // DEBUG LOG
-  res.status(NOT_FOUND).send({ message: "Requested resource not found" }); // ✅ Use constant
+  res.status(NOT_FOUND).send({ message: "Requested resource not found" });
 });
 
 module.exports = router;

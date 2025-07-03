@@ -1,4 +1,3 @@
-// models/user.js
 const mongoose = require("mongoose");
 const validator = require("validator");
 
@@ -18,6 +17,22 @@ const userSchema = new mongoose.Schema({
       },
       message: "You must enter a valid URL",
     },
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    validate: {
+      validator(value) {
+        return validator.isEmail(value);
+      },
+      message: "You must enter a valid email",
+    },
+  },
+  password: {
+    type: String,
+    required: true,
+    select: false, // 👈 prevents password from being returned by default
   },
 });
 
