@@ -7,16 +7,14 @@ const {
 } = require("../utils/errors");
 
 // GET all items
-module.exports.getClothingItems = (req, res) => {
-  return ClothingItem.find({})
-    .then((items) => res.send(items))
-    .catch((err) => {
-      console.error(err);
-      return res
+module.exports.getClothingItems = (req, res) =>
+  ClothingItem.find({})
+    .then((items) => res.send(items)) // ✅ arrow-body-style fixed
+    .catch(() =>
+      res
         .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error occurred on the server" });
-    });
-};
+        .send({ message: "An error occurred on the server" })
+    );
 
 // POST create new item
 module.exports.createClothingItem = (req, res) => {
@@ -25,7 +23,6 @@ module.exports.createClothingItem = (req, res) => {
   return ClothingItem.create({ name, weather, imageUrl, owner: req.user._id })
     .then((item) => res.status(201).send(item))
     .catch((err) => {
-      console.error(err);
       if (err.name === "ValidationError") {
         return res.status(BAD_REQUEST).send({ message: "Invalid item data" });
       }
@@ -36,8 +33,8 @@ module.exports.createClothingItem = (req, res) => {
 };
 
 // DELETE an item by ID (only if user owns it)
-module.exports.deleteClothingItem = (req, res) => {
-  return ClothingItem.findById(req.params.itemId)
+module.exports.deleteClothingItem = (req, res) =>
+  ClothingItem.findById(req.params.itemId)
     .orFail(() => {
       const error = new Error("Item not found");
       error.statusCode = NOT_FOUND;
@@ -53,7 +50,6 @@ module.exports.deleteClothingItem = (req, res) => {
     })
     .then(() => res.send({ message: "Item deleted" }))
     .catch((err) => {
-      console.error(err);
       if (err.name === "CastError") {
         return res.status(BAD_REQUEST).send({ message: "Invalid item ID" });
       }
@@ -67,11 +63,10 @@ module.exports.deleteClothingItem = (req, res) => {
         .status(INTERNAL_SERVER_ERROR)
         .send({ message: "An error occurred on the server" });
     });
-};
 
 // PUT like item
-module.exports.likeItem = (req, res) => {
-  return ClothingItem.findByIdAndUpdate(
+module.exports.likeItem = (req, res) =>
+  ClothingItem.findByIdAndUpdate(
     req.params.itemId,
     { $addToSet: { likes: req.user._id } },
     { new: true }
@@ -83,7 +78,6 @@ module.exports.likeItem = (req, res) => {
     })
     .then((item) => res.send(item))
     .catch((err) => {
-      console.error(err);
       if (err.name === "CastError") {
         return res.status(BAD_REQUEST).send({ message: "Invalid item ID" });
       }
@@ -94,11 +88,10 @@ module.exports.likeItem = (req, res) => {
         .status(INTERNAL_SERVER_ERROR)
         .send({ message: "An error occurred on the server" });
     });
-};
 
 // DELETE dislike item
-module.exports.dislikeItem = (req, res) => {
-  return ClothingItem.findByIdAndUpdate(
+module.exports.dislikeItem = (req, res) =>
+  ClothingItem.findByIdAndUpdate(
     req.params.itemId,
     { $pull: { likes: req.user._id } },
     { new: true }
@@ -110,7 +103,6 @@ module.exports.dislikeItem = (req, res) => {
     })
     .then((item) => res.send(item))
     .catch((err) => {
-      console.error(err);
       if (err.name === "CastError") {
         return res.status(BAD_REQUEST).send({ message: "Invalid item ID" });
       }
@@ -121,4 +113,3 @@ module.exports.dislikeItem = (req, res) => {
         .status(INTERNAL_SERVER_ERROR)
         .send({ message: "An error occurred on the server" });
     });
-};
