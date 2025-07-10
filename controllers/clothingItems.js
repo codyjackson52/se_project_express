@@ -7,20 +7,21 @@ const {
 } = require("../utils/errors");
 
 // GET all items
-module.exports.getClothingItems = (req, res) =>
+module.exports.getClothingItems = (req, res) => {
   ClothingItem.find({})
-    .then((items) => res.send(items)) // ✅ arrow-body-style fixed
-    .catch(() =>
+    .then((items) => res.send(items))
+    .catch(() => {
       res
         .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error occurred on the server" })
-    );
+        .send({ message: "An error occurred on the server" });
+    });
+};
 
 // POST create new item
 module.exports.createClothingItem = (req, res) => {
   const { name, weather, imageUrl } = req.body;
 
-  return ClothingItem.create({ name, weather, imageUrl, owner: req.user._id })
+  ClothingItem.create({ name, weather, imageUrl, owner: req.user._id })
     .then((item) => res.status(201).send(item))
     .catch((err) => {
       if (err.name === "ValidationError") {
@@ -33,7 +34,7 @@ module.exports.createClothingItem = (req, res) => {
 };
 
 // DELETE an item by ID (only if user owns it)
-module.exports.deleteClothingItem = (req, res) =>
+module.exports.deleteClothingItem = (req, res) => {
   ClothingItem.findById(req.params.itemId)
     .orFail(() => {
       const error = new Error("Item not found");
@@ -63,9 +64,10 @@ module.exports.deleteClothingItem = (req, res) =>
         .status(INTERNAL_SERVER_ERROR)
         .send({ message: "An error occurred on the server" });
     });
+};
 
 // PUT like item
-module.exports.likeItem = (req, res) =>
+module.exports.likeItem = (req, res) => {
   ClothingItem.findByIdAndUpdate(
     req.params.itemId,
     { $addToSet: { likes: req.user._id } },
@@ -88,9 +90,10 @@ module.exports.likeItem = (req, res) =>
         .status(INTERNAL_SERVER_ERROR)
         .send({ message: "An error occurred on the server" });
     });
+};
 
 // DELETE dislike item
-module.exports.dislikeItem = (req, res) =>
+module.exports.dislikeItem = (req, res) => {
   ClothingItem.findByIdAndUpdate(
     req.params.itemId,
     { $pull: { likes: req.user._id } },
@@ -113,3 +116,4 @@ module.exports.dislikeItem = (req, res) =>
         .status(INTERNAL_SERVER_ERROR)
         .send({ message: "An error occurred on the server" });
     });
+};

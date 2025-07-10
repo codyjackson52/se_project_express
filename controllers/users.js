@@ -43,8 +43,6 @@ const createUser = (req, res) => {
     });
 };
 
-// ❌ REMOVED: getUsers controller (not needed by spec)
-
 // GET /users/me — Get the current authenticated user
 const getCurrentUser = (req, res) => {
   User.findById(req.user._id)

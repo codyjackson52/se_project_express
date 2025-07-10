@@ -4,20 +4,22 @@ const userRoutes = require("./users");
 const itemRoutes = require("./clothingItems");
 const login = require("../controllers/login");
 const { createUser } = require("../controllers/users");
+const { getClothingItems } = require("../controllers/clothingItems");
 const { NOT_FOUND } = require("../utils/errors");
 
 // Public routes
 router.post("/signin", login);
 router.post("/signup", createUser);
+router.get("/items", getClothingItems); // ✅ public only
 
-// Auth middleware — protects everything below
+// Protect everything else
 router.use(auth);
 
 // Protected routes
 router.use("/users", userRoutes);
-router.use("/items", itemRoutes);
+router.use("/items", itemRoutes); // ✅ now only protected routes inside
 
-// 404 Catch-all
+// Catch-all 404
 router.use("*", (req, res) => {
   res.status(NOT_FOUND).send({ message: "Requested resource not found" });
 });
