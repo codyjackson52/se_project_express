@@ -1,6 +1,7 @@
 const express = require("express");
 const auth = require("../middlewares/auth");
 const {
+  getClothingItems, // ✅ import this
   createClothingItem,
   deleteClothingItem,
   likeItem,
@@ -9,7 +10,9 @@ const {
 
 const router = express.Router();
 
-router.post("/", auth, createClothingItem);
+router.get("/", getClothingItems); // ✅ add this line
+
+router.post("/", createClothingItem);
 router.delete("/:itemId", auth, deleteClothingItem);
 router.put("/:itemId/likes", auth, likeItem);
 router.delete("/:itemId/likes", auth, dislikeItem);
