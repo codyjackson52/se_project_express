@@ -1,78 +1,25 @@
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const User = require("../models/user");
-const {
-  BAD_REQUEST,
-  NOT_FOUND,
-  CONFLICT,
-  INTERNAL_SERVER_ERROR,
-} = require("../utils/errors");
+const BadRequestError = require("../errors/BadRequestError");
+const NotFoundError = require("../errors/NotFoundError");
+const ConflictError = require("../errors/ConflictError");
+const { JWT_SECRET = "dev-secret" } = process.env;
 
-// POST /signup — Create user
-const createUser = (req, res) => {
-  const { email, password, name, avatar } = req.body;
-
-  bcrypt
-    .hash(password, 10)
-    .then((hash) =>
-      User.create({
-        email,
-        password: hash,
-        name,
-        avatar,
-      })
-    )
-    .then((user) => {
-      const userObj = user.toObject();
-      delete userObj.password;
-      return res.status(201).send(userObj);
-    })
-    .catch((err) => {
-      console.error(err.name, err.message);
-
-      if (err.code === 11000) {
-        return res.status(CONFLICT).send({ message: "Email already exists" });
-      }
-
-      if (err.name === "ValidationError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid data" });
-      }
-
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error has occurred on the server" });
-    });
-};
-
-// GET /users/me — Get the current authenticated user
-const getCurrentUser = (req, res) => {
+// Get current user
+module.exports.getCurrentUser = (req, res, next) => {
   User.findById(req.user._id)
-    .orFail(() => {
-      const error = new Error("User not found");
-      error.statusCode = NOT_FOUND;
-      throw error;
+    .then((user) => {
+      if (!user) {
+        throw new NotFoundError("User not found");
+      }
+      res.send(user);
     })
-    .then((user) => res.send(user))
-    .catch((err) => {
-      console.error(err.name, err.message);
-
-      if (err.name === "CastError") {
-        return res
-          .status(BAD_REQUEST)
-          .send({ message: "Invalid user ID format" });
-      }
-
-      if (err.statusCode === NOT_FOUND) {
-        return res.status(NOT_FOUND).send({ message: "User not found" });
-      }
-
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error has occurred on the server" });
-    });
+    .catch(next);
 };
 
-// PATCH /users/me — Update name and avatar
-const updateUserProfile = (req, res) => {
+// Update user profile
+module.exports.updateUserProfile = (req, res, next) => {
   const { name, avatar } = req.body;
 
   User.findByIdAndUpdate(
@@ -80,31 +27,75 @@ const updateUserProfile = (req, res) => {
     { name, avatar },
     { new: true, runValidators: true }
   )
-    .orFail(() => {
-      const error = new Error("User not found");
-      error.statusCode = NOT_FOUND;
-      throw error;
+    .then((user) => {
+      if (!user) {
+        throw new NotFoundError("User not found");
+      }
+      res.send(user);
     })
-    .then((updatedUser) => res.send(updatedUser))
     .catch((err) => {
-      console.error(err.name, err.message);
-
       if (err.name === "ValidationError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid user data" });
+        return next(new BadRequestError("Invalid user data"));
       }
-
-      if (err.statusCode === NOT_FOUND) {
-        return res.status(NOT_FOUND).send({ message: "User not found" });
-      }
-
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error has occurred on the server" });
+      return next(err);
     });
 };
 
-module.exports = {
-  createUser,
-  getCurrentUser,
-  updateUserProfile,
+// Create a new user (signup)
+module.exports.createUser = (req, res, next) => {
+  const { name, avatar, email, password } = req.body;
+
+  bcrypt
+    .hash(password, 10)
+    .then((hash) =>
+      User.create({
+        name,
+        avatar,
+        email,
+        password: hash,
+      })
+    )
+    .then((user) =>
+      res.status(201).send({
+        _id: user._id,
+        name: user.name,
+        avatar: user.avatar,
+        email: user.email,
+      })
+    )
+    .catch((err) => {
+      if (err.code === 11000) {
+        return next(new ConflictError("User with this email already exists"));
+      }
+      if (err.name === "ValidationError") {
+        return next(new BadRequestError("Invalid user data"));
+      }
+      return next(err);
+    });
+};
+
+// Login user (signin)
+module.exports.login = (req, res, next) => {
+  const { email, password } = req.body;
+
+  User.findOne({ email })
+    .select("+password")
+    .then((user) => {
+      if (!user) {
+        throw new BadRequestError("Incorrect email or password");
+      }
+
+      return bcrypt.compare(password, user.password).then((matched) => {
+        if (!matched) {
+          throw new BadRequestError("Incorrect email or password");
+        }
+
+        const token = jwt.sign({ _id: user._id }, JWT_SECRET, {
+          expiresIn: "7d",
+        });
+
+        res.send({ token });
+      });
+    })
+    .catch(next);
 };

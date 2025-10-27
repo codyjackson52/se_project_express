@@ -1,119 +1,97 @@
 const ClothingItem = require("../models/clothingItem");
-const {
-  BAD_REQUEST,
-  NOT_FOUND,
-  FORBIDDEN,
-  INTERNAL_SERVER_ERROR,
-} = require("../utils/errors");
+const BadRequestError = require("../errors/BadRequestError");
+const ForbiddenError = require("../errors/ForbiddenError");
+const NotFoundError = require("../errors/NotFoundError");
 
-// GET all items
-module.exports.getClothingItems = (req, res) => {
-  ClothingItem.find({})
-    .then((items) => res.send(items))
-    .catch(() => {
-      res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error occurred on the server" });
-    });
+// GET /items — public
+module.exports.getClothingItems = async (req, res, next) => {
+  try {
+    const items = await ClothingItem.find({});
+    res.send(items);
+  } catch (err) {
+    next(err);
+  }
 };
 
-// POST create new item
-module.exports.createClothingItem = (req, res) => {
-  const { name, weather, imageUrl } = req.body;
+// POST /items — protected
+module.exports.createClothingItem = async (req, res, next) => {
+  try {
+    const { name, weather, imageUrl } = req.body;
+    const owner = req.user._id;
 
-  ClothingItem.create({ name, weather, imageUrl, owner: req.user._id })
-    .then((item) => res.status(201).send(item))
-    .catch((err) => {
-      if (err.name === "ValidationError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid item data" });
-      }
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error occurred on the server" });
-    });
+    const item = await ClothingItem.create({ name, weather, imageUrl, owner });
+    res.status(201).send(item);
+  } catch (err) {
+    if (err.name === "ValidationError") {
+      return next(new BadRequestError("Invalid item data"));
+    }
+    return next(err);
+  }
 };
 
-// DELETE an item by ID (only if user owns it)
-module.exports.deleteClothingItem = (req, res) => {
-  ClothingItem.findById(req.params.itemId)
-    .orFail(() => {
-      const error = new Error("Item not found");
-      error.statusCode = NOT_FOUND;
-      throw error;
-    })
-    .then((item) => {
-      if (!item.owner.equals(req.user._id)) {
-        const error = new Error("You are not allowed to delete this item");
-        error.statusCode = FORBIDDEN;
-        throw error;
-      }
-      return item.deleteOne();
-    })
-    .then(() => res.send({ message: "Item deleted" }))
-    .catch((err) => {
-      if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid item ID" });
-      }
-      if (err.statusCode === NOT_FOUND) {
-        return res.status(NOT_FOUND).send({ message: err.message });
-      }
-      if (err.statusCode === FORBIDDEN) {
-        return res.status(FORBIDDEN).send({ message: err.message });
-      }
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error occurred on the server" });
-    });
+// DELETE /items/:itemId — protected
+module.exports.deleteClothingItem = async (req, res, next) => {
+  try {
+    const item = await ClothingItem.findById(req.params.itemId);
+
+    if (!item) {
+      throw new NotFoundError("Item not found");
+    }
+
+    if (item.owner.toString() !== req.user._id) {
+      throw new ForbiddenError("You cannot delete another user's item");
+    }
+
+    await item.deleteOne();
+    res.send({ message: "Item deleted" });
+  } catch (err) {
+    if (err.name === "CastError") {
+      return next(new BadRequestError("Invalid item ID"));
+    }
+    return next(err);
+  }
 };
 
-// PUT like item
-module.exports.likeItem = (req, res) => {
-  ClothingItem.findByIdAndUpdate(
-    req.params.itemId,
-    { $addToSet: { likes: req.user._id } },
-    { new: true }
-  )
-    .orFail(() => {
-      const error = new Error("Item not found");
-      error.statusCode = NOT_FOUND;
-      throw error;
-    })
-    .then((item) => res.send(item))
-    .catch((err) => {
-      if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid item ID" });
-      }
-      if (err.statusCode === NOT_FOUND) {
-        return res.status(NOT_FOUND).send({ message: err.message });
-      }
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error occurred on the server" });
-    });
+// PUT /items/:itemId/likes — protected
+module.exports.likeItem = async (req, res, next) => {
+  try {
+    const item = await ClothingItem.findByIdAndUpdate(
+      req.params.itemId,
+      { $addToSet: { likes: req.user._id } },
+      { new: true }
+    );
+
+    if (!item) {
+      throw new NotFoundError("Item not found");
+    }
+
+    res.send(item);
+  } catch (err) {
+    if (err.name === "CastError") {
+      return next(new BadRequestError("Invalid item ID"));
+    }
+    return next(err);
+  }
 };
 
-// DELETE dislike item
-module.exports.dislikeItem = (req, res) => {
-  ClothingItem.findByIdAndUpdate(
-    req.params.itemId,
-    { $pull: { likes: req.user._id } },
-    { new: true }
-  )
-    .orFail(() => {
-      const error = new Error("Item not found");
-      error.statusCode = NOT_FOUND;
-      throw error;
-    })
-    .then((item) => res.send(item))
-    .catch((err) => {
-      if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid item ID" });
-      }
-      if (err.statusCode === NOT_FOUND) {
-        return res.status(NOT_FOUND).send({ message: err.message });
-      }
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error occurred on the server" });
-    });
+// DELETE /items/:itemId/likes — protected
+module.exports.dislikeItem = async (req, res, next) => {
+  try {
+    const item = await ClothingItem.findByIdAndUpdate(
+      req.params.itemId,
+      { $pull: { likes: req.user._id } },
+      { new: true }
+    );
+
+    if (!item) {
+      throw new NotFoundError("Item not found");
+    }
+
+    res.send(item);
+  } catch (err) {
+    if (err.name === "CastError") {
+      return next(new BadRequestError("Invalid item ID"));
+    }
+    return next(err);
+  }
 };
