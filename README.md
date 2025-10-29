@@ -11,3 +11,14 @@ This is the back-end server for the "What to Wear?" (WTWR) application. It handl
 - CORS
 - REST API principles
 - Temporary user authorization middleware
+
+## 🌐 Project Links
+
+**Frontend GitHub Repository:**  
+https://github.com/codyjackson52/se_project_react
+
+**Backend GitHub Repository:**  
+https://github.com/codyjackson52/se_project_express
+
+**Backend URL (once deployed):**  
+http://localhost:3001 <!-- or your Render/Google Cloud link -->
