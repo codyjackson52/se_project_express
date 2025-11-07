@@ -5,11 +5,15 @@ const itemRoutes = require("./clothingItems");
 
 const { login, createUser } = require("../controllers/users");
 const { getClothingItems } = require("../controllers/clothingItems");
-const { NOT_FOUND } = require("../utils/errors");
+const {
+  validateLogin,
+  validateCreateUser,
+} = require("../middlewares/validation");
+const NotFoundError = require("../errors/NotFoundError");
 
 // Public routes
-router.post("/signin", login);
-router.post("/signup", createUser);
+router.post("/signin", validateLogin, login);
+router.post("/signup", validateCreateUser, createUser);
 router.get("/items", getClothingItems);
 
 // Auth-protected routes
@@ -18,8 +22,8 @@ router.use("/users", userRoutes);
 router.use("/items", itemRoutes);
 
 // Catch-all 404
-router.use("*", (req, res) => {
-  res.status(NOT_FOUND).send({ message: "Requested resource not found" });
+router.use("*", (req, res, next) => {
+  next(new NotFoundError("Requested resource not found"));
 });
 
 module.exports = router;

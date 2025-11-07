@@ -8,12 +8,12 @@ const { JWT_SECRET = "dev-secret" } = process.env;
 
 // Get current user
 module.exports.getCurrentUser = (req, res, next) => {
-  User.findById(req.user._id)
+  return User.findById(req.user._id)
     .then((user) => {
       if (!user) {
         throw new NotFoundError("User not found");
       }
-      res.send(user);
+      return res.send(user);
     })
     .catch(next);
 };
@@ -22,7 +22,7 @@ module.exports.getCurrentUser = (req, res, next) => {
 module.exports.updateUserProfile = (req, res, next) => {
   const { name, avatar } = req.body;
 
-  User.findByIdAndUpdate(
+  return User.findByIdAndUpdate(
     req.user._id,
     { name, avatar },
     { new: true, runValidators: true }
@@ -31,7 +31,7 @@ module.exports.updateUserProfile = (req, res, next) => {
       if (!user) {
         throw new NotFoundError("User not found");
       }
-      res.send(user);
+      return res.send(user);
     })
     .catch((err) => {
       if (err.name === "ValidationError") {
@@ -45,7 +45,7 @@ module.exports.updateUserProfile = (req, res, next) => {
 module.exports.createUser = (req, res, next) => {
   const { name, avatar, email, password } = req.body;
 
-  bcrypt
+  return bcrypt
     .hash(password, 10)
     .then((hash) =>
       User.create({
@@ -78,7 +78,11 @@ module.exports.createUser = (req, res, next) => {
 module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
 
-  User.findOne({ email })
+  if (!email || !password) {
+    return next(new BadRequestError("Incorrect email or password"));
+  }
+
+  return User.findOne({ email })
     .select("+password")
     .then((user) => {
       if (!user) {
@@ -94,7 +98,7 @@ module.exports.login = (req, res, next) => {
           expiresIn: "7d",
         });
 
-        res.send({ token });
+        return res.send({ token });
       });
     })
     .catch(next);
